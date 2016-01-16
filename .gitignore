@@ -1,0 +1,118 @@
+<?php
+
+include 'guvenlik.php';
+include 'baglan.php';
+
+
+
+include 'header.php';
+if(isset($_POST["ekle"])){
+    if(isset($_FILES['foto']['name'])){
+        //seçilen dosya bilgilerinin alınması
+        $isim = $_FILES['foto']['name'];
+        $yer = $_FILES['foto']['tmp_name'];
+        $tip = $_FILES['foto']['type'];
+
+        //dosyanın resim olup olmadığı kontrolü
+        if(($tip=='image/jpeg') || ($tip=='image/gif') || ($tip=='image/png')){
+            //fonsksiyona bilgilerin gönderilmesi
+            $k_resim = resim_kayit($isim,$yer,$tip,1920,460);
+            if (move_uploaded_file($_FILES["foto"]["tmp_name"], "images/sektorler/" . $isim))
+            {
+                $hakkimizda_ekle=$db->prepare("insert into sektorler VALUES (?,?)");
+                $hakkimizda_ekle->execute(array(null,$k_resim));
+                ?>
+
+                <div class="alert alert-success alert-dismissable">
+                    <button type="button" class="close" data-dismiss="alert"
+                            aria-hidden="true">&times;</button>
+                    Hakkımızda Bilgileri Başarıyla Eklendi!Sayfa yenileniyor..
+                </div>
+                <?php
+
+                                              }
+            //resmin önizlemesi
+                echo "<img src='{$k_resim}' />";
+              }else{
+            echo 'Lütfen resim dosyası seçin...';
+            }
+        }
+}
+
+function resim_kayit($name,$resim,$tip,$r_genislik,$r_yukseklik){
+
+    //resim bilgilerini alma
+    list($gen, $yuk, $type) = getimagesize($resim);
+
+    //en ve boy oranının hesaplanması
+    $enOran = $r_genislik / $gen;
+    $boyOran = $r_yukseklik / $yuk;
+
+    //oranın ayarlanması
+    if($enOran > $boyOran){
+        $yEn = floor($gen * $enOran);
+        $yBoy = floor($yuk * $enOran);
+    }else{
+        $yEn = floor($gen * $boyOran);
+        $yBoy = floor($yuk * $boyOran);
+    }
+
+    //kesilmeye başlangıç noktalarının hesaplanaması
+    $fEn = floor(0 - (($yEn - $r_genislik) / 2));
+    $fBoy = floor(0 - (($yBoy - $r_yukseklik) / 2));
+
+    //resmin türüne göre hafızaya alınma işlemi
+    switch($tip){
+        case 'image/jpeg':$o_img=imagecreatefromjpeg($resim);break;
+        case 'image/gif':$o_img=imagecreatefromgif($resim);break;
+        case 'image/png':$o_img=imagecreatefrompng($resim);break;
+    }
+
+    //renklerin belirlenmesi
+    $g_img = imagecreatetruecolor($r_genislik, $r_yukseklik);
+
+    //resmin kesilmesi
+    imagecopyresampled($g_img,$o_img,$fEn,$fBoy,0,0,$yEn,$yBoy,$gen,$yuk);
+
+    //resmin türüne göre oluşturulması
+    switch($tip){
+        case 'image/jpeg':imagejpeg($g_img, 'yeni_'.$name);break;
+        case 'image/gif':imagegif($g_img, 'yeni_'.$name);break;
+        case 'image/png':imagepng($g_img, 'yeni_'.$name);break;
+    }
+
+    //resmin kaynağını silme
+    imagedestroy($o_img);
+    imagedestroy($g_img);
+
+    echo "Resminiz başarıyla yüklendi.<br />";
+    //resmin yeni ismi
+    $sonuc ='yeni_'.$name;
+
+
+
+
+    return $sonuc;
+}
+?>
+<div class="panel">
+    <form class="form-horizontal" method="post" enctype="multipart/form-data"></br>
+
+<div class="form-group">
+    <label class="col-lg-3 control-label">Fotoğraf :</label>
+    <div class="col-lg-9 media">
+        <div class="bg-light pull-left text-center media-large thumb-large"><i class="icon-user inline icon-light icon-3x m-t-large m-b-large"></i></div>
+        <div class="media-body">
+            <input type="file" required="" name="foto" title="Change" class="btn btn-sm btn-info m-b-small" style="left: 0px; top: 1px;"><br>
+        </div>
+    </div>
+</div>
+<div class="form-group">
+    <div class="col-lg-5 col-lg-offset-5">
+
+        <a href="sektorler.php" class="btn btn-white">İptal</a>
+        <input  type="submit" name="ekle" value="EKLE" class="btn btn-success"></a>
+    </div>
+</div>
+</form>
+</div></div></div>
